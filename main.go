@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// start it
 func handlerFunc(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		fmt.Fprint(w, "<h1>Hello, 这里是 goblog</h1>")

@@ -25,7 +25,16 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	router := http.NewServeMux()
-	http.HandleFunc("/", handlerFunc)
-	http.HandleFunc("/about", aboutHandler)
+	router.HandleFunc("/", handlerFunc)
+	router.HandleFunc("/about", aboutHandler)
+	// 文章详情
+	router.HandleFunc("/articles/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case "GET":
+			fmt.Fprint(w, "访问文章列表")
+		case "POST":
+			fmt.Fprint(w, "创建新的文章")
+		}
+	})
 	http.ListenAndServe(":3000", router)
 }

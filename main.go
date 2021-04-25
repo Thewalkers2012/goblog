@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -45,6 +46,17 @@ func forceHTMLMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func removeTrailingSlash(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 1. 除首页以外，移除所有请求路径的斜杠
+		if r.URL.Path != "/" {
+			r.URL.Path = strings.TrimSuffix(r.URL.Path, "/")
+		}
+		// 2. 将请求传递下去
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	router := mux.NewRouter() // 使用gorilla/mux 更改的一行
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
@@ -55,6 +67,7 @@ func main() {
 	// 定义 404页面
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	router.Use(forceHTMLMiddleware) // 使用Gorillia Mux 中的use方法来加载中间件
+	router.Use(removeTrailingSlash)
 	// 通过命名路由获取 URL 实例
 	homeURL, _ := router.Get("home").URL()
 	fmt.Println("homeURL: ", homeURL)

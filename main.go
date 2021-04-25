@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var router = mux.NewRouter() // 使用gorilla/mux 更改的一行
+
 // start it
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Hello, 欢迎来到 goblog！ </h1>")
@@ -57,9 +59,30 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 	})
 }
 
+// /articles/create 的路由
+func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
+	html := `
+	<!DOCTYPE html>
+	<html lang = "en">
+	<head>
+		<title>创建文章 —— 我的技术博客</title>
+	</head>
+	<body>
+		<form action="%s" method="post">
+			<p><input type = "text" name = "title"></p>
+			<p><textarea name = "body" cols = "30" rows = "10"></textarea></p>
+			<p><button type = "submit">提交</button></p>
+		</form>
+	</body>
+	</html>
+	`
+	storeURL, _ := router.Get("articles.store").URL()
+	fmt.Fprintf(w, html, storeURL)
+}
+
 func main() {
-	router := mux.NewRouter() // 使用gorilla/mux 更改的一行
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
+	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
@@ -67,11 +90,10 @@ func main() {
 	// 定义 404页面
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	router.Use(forceHTMLMiddleware) // 使用Gorillia Mux 中的use方法来加载中间件
-	router.Use(removeTrailingSlash)
 	// 通过命名路由获取 URL 实例
 	homeURL, _ := router.Get("home").URL()
 	fmt.Println("homeURL: ", homeURL)
 	articleURL, _ := router.Get("articles.show").URL("id", "1")
 	fmt.Println("articleURL: ", articleURL)
-	http.ListenAndServe(":3000", router)
+	http.ListenAndServe(":3000", removeTrailingSlash(router))
 }

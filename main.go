@@ -1,18 +1,56 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
+	"time"
 	"unicode/utf8"
 
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
 var router = mux.NewRouter() // 使用gorilla/mux 更改的一行
+var db *sql.DB
+
+// type MySQLDriver struct{}
+
+func initDB() {
+	var err error
+
+	config := mysql.Config{
+		User:                 "litianyu",
+		Passwd:               "lty123456",
+		Addr:                 "81.70.8.101:3306",
+		Net:                  "tcp",
+		DBName:               "goblog",
+		AllowNativePasswords: true,
+	}
+
+	// 准备数据库链接池, DSN 全称Data Source Name，表示数据源信息
+	db, err = sql.Open("mysql", config.FormatDSN())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 设置最大连接数
+	db.SetMaxOpenConns(25)
+	// 设置最大空闲连接数, <= 0时表示无限大，默认值为2
+	db.SetMaxIdleConns(20)
+	// 设置每个链接过期时间
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// 尝试链接， 失败后会报错
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 // ArticlesFormData 创建博文表单数据
 type ArticlesFormData struct {
@@ -130,6 +168,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	initDB()
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")

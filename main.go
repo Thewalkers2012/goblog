@@ -52,6 +52,18 @@ func initDB() {
 	}
 }
 
+func createTable() {
+	createArticlesSQL := `CREATE TABLE IF NOT EXISTS articles(
+		id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+		title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+		body longtext COLLATE utf8mb4_unicode_ci
+	); `
+	_, err := db.Exec(createArticlesSQL)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 // ArticlesFormData 创建博文表单数据
 type ArticlesFormData struct {
 	Title, Body string
@@ -169,6 +181,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	initDB()
+	createTable()
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
 	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")

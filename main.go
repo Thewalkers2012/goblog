@@ -72,6 +72,12 @@ type ArticlesFormData struct {
 	Errors      map[string]string
 }
 
+// Article 对应一条文章数据
+type Article struct {
+	Title, Body string
+	ID          int64
+}
+
 // start it
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Hello, 欢迎来到 goblog！ </h1>")
@@ -88,9 +94,37 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL 参数
 	vars := mux.Vars(r)
 	id := vars["id"]
-	fmt.Fprint(w, "文章 ID："+id)
+
+	// 2. 读取对应的文章的数据
+	article := Article{}
+	query := "SELECT * FROM articles WHERE id = ?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+
+	// 3. 如果出现了错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 3.1 数据未找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			// 3.2 数据库错误
+			if err != nil {
+				log.Fatal(err)
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器错误")
+		}
+	} else {
+		// 4. 读取成功
+		tmpl, err := template.ParseFiles("resources/views/articles/show.html")
+		if err != nil {
+			log.Fatal(err)
+		}
+		tmpl.Execute(w, article)
+	}
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,13 +194,6 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "500 服务器内部错误")
 		}
-		/*
-			fmt.Fprint(w, "验证通过!<br>")
-			fmt.Fprintf(w, "title 的值为: %v <br>", title)
-			fmt.Fprintf(w, "title 的长度为: %v <br>", utf8.RuneCountInString(title))
-			fmt.Fprintf(w, "body 的值为: %v <br>", body)
-			fmt.Fprintf(w, "body 的长度为: %v <br>", utf8.RuneCountInString(body))
-		*/
 	} else {
 		storeURL, _ := router.Get("articles.store").URL()
 

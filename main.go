@@ -93,15 +93,24 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>如有疑惑，请联系我们。</p>")
 }
 
-func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. 获取 URL 参数
+func getRouteVariable(parameterName string, r *http.Request) string {
 	vars := mux.Vars(r)
-	id := vars["id"]
+	return vars[parameterName]
+}
 
-	// 2. 读取对应的文章的数据
+func getArticlesByID(id string) (Article, error) {
 	article := Article{}
 	query := "SELECT * FROM articles WHERE id = ?"
 	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	return article, err
+}
+
+func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL 参数
+	id := getRouteVariable("id", r)
+
+	// 2. 读取对应的文章的数据
+	article, err := getArticlesByID(id)
 
 	// 3. 如果出现了错误
 	if err != nil {
@@ -213,6 +222,68 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL参数
+	id := getRouteVariable("id", r)
+
+	// 2. 读取对应文章的数据
+	article, err := getArticlesByID(id)
+
+	// 3. 如果出现问题
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 3.1 数据未找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			// 3.2 数据库出现问题
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
+	} else {
+		// 4. 读取数据成功，显示表单
+		updateURL, _ := router.Get("articles.update").URL("id", id)
+		data := ArticlesFormData{
+			Title:  article.Title,
+			Body:   article.Body,
+			URL:    updateURL,
+			Errors: nil,
+		}
+		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+		if err != nil {
+			log.Fatal(err)
+		}
+		tmpl.Execute(w, data)
+	}
+}
+
+func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL 参数
+	id := getRouteVariable("id", r)
+
+	// 2. 读取相应的文章
+	_, err := getArticlesByID(id)
+
+	// 3. 如果出现错误
+	if err != nil {
+		// 3.1 数据未找到
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			// 3.2 数据库出现错误
+			if err != nil {
+				log.Fatal(err)
+			}
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器错误")
+		}
+	} else {
+		// 4. 未出现错误
+
+	}
+}
+
 func forceHTMLMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 1. 设置标头
@@ -260,6 +331,8 @@ func main() {
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
 	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
+	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
+	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")
 	// 定义 404页面
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	router.Use(forceHTMLMiddleware) // 使用Gorillia Mux 中的use方法来加载中间件

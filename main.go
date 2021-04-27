@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"goblog/pkg/database"
 	"goblog/pkg/logger"
 	"goblog/pkg/route"
 	"goblog/pkg/types"
@@ -11,55 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-	"time"
 	"unicode/utf8"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
 
 var router *mux.Router
 var db *sql.DB
-
-// type MySQLDriver struct{}
-
-func initDB() {
-	var err error
-
-	config := mysql.Config{
-		User:                 "litianyu",
-		Passwd:               "lty123456",
-		Addr:                 "81.70.8.101:3306",
-		Net:                  "tcp",
-		DBName:               "goblog",
-		AllowNativePasswords: true,
-	}
-
-	// 准备数据库链接池, DSN 全称Data Source Name，表示数据源信息
-	db, err = sql.Open("mysql", config.FormatDSN())
-	logger.LogError(err)
-
-	// 设置最大连接数
-	db.SetMaxOpenConns(25)
-	// 设置最大空闲连接数, <= 0时表示无限大，默认值为2
-	db.SetMaxIdleConns(20)
-	// 设置每个链接过期时间
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	// 尝试链接， 失败后会报错
-	err = db.Ping()
-	logger.LogError(err)
-}
-
-func createTable() {
-	createArticlesSQL := `CREATE TABLE IF NOT EXISTS articles(
-		id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
-		title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-		body longtext COLLATE utf8mb4_unicode_ci
-	); `
-	_, err := db.Exec(createArticlesSQL)
-	logger.LogError(err)
-}
 
 // ArticlesFormData 创建博文表单数据
 type ArticlesFormData struct {
@@ -437,8 +396,11 @@ func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	initDB()
-	createTable()
+	// 数据库的初始化
+	database.Initialize()
+	db = database.DB
+
+	// 路由的初始化
 	route.Initialize()
 	router = route.Router
 	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")

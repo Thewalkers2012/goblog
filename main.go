@@ -172,24 +172,28 @@ func saveArticlesToDB(title string, body string) (int64, error) {
 	return 0, err
 }
 
-func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	title := r.PostFormValue("title")
-	body := r.PostFormValue("body")
+func valdateArticleFormData(title string, body string) map[string]string {
 	errors := make(map[string]string)
-
 	// 验证标题
 	if title == "" {
 		errors["title"] = "标题不能为空"
 	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "标题的长度介于 3 - 40 个字符之间"
+		errors["title"] = "标题长度需介于 3 - 40 之间"
 	}
 
 	// 验证内容
 	if body == "" {
 		errors["body"] = "内容不能为空"
 	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "内容的长度需要大于等于 10 个字符"
+		errors["body"] = "内容长度需要大于 10 个字节"
 	}
+	return errors
+}
+
+func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.PostFormValue("title")
+	body := r.PostFormValue("body")
+	errors := valdateArticleFormData(title, body)
 
 	// 检查是否有错误
 	if len(errors) == 0 {
@@ -281,6 +285,43 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 4. 未出现错误
 
+		// 4.1 表单验证
+		title := r.PostFormValue("title")
+		body := r.PostFormValue("body")
+		errors := valdateArticleFormData(title, body)
+		if len(errors) == 0 {
+			// 表单验证通过，更新数据
+			query := "UPDATE articles SET title = ?, body = ? WHERE id = ?"
+			rs, err := db.Exec(query, title, body, id)
+
+			if err != nil {
+				log.Fatal(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 服务器内部错误")
+			}
+
+			// 更新成功，跳转到文章详情页面
+			if n, _ := rs.RowsAffected(); n > 0 {
+				showURL, _ := router.Get("articles.show").URL("id", id)
+				http.Redirect(w, r, showURL.String(), http.StatusFound)
+			} else {
+				fmt.Fprint(w, "您没有做任何的修改")
+			}
+		} else {
+			// 表单验证不通过，显示理由
+			updateURL, _ := router.Get("articles.update").URL("id", id)
+			data := ArticlesFormData{
+				Title:  title,
+				Body:   body,
+				URL:    updateURL,
+				Errors: errors,
+			}
+			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+			if err != nil {
+				log.Fatal(err)
+			}
+			tmpl.Execute(w, data)
+		}
 	}
 }
 

@@ -14,8 +14,8 @@ func SetRoute(r *mux.Router) {
 	route = r
 }
 
-// RouteName2URL 通过路由名来获取 URL
-func RouteName2URL(routeName string, pairs ...string) string {
+// Name2URL 通过路由名来获取 URL
+func Name2URL(routeName string, pairs ...string) string {
 	url, err := route.Get(routeName).URL(pairs...)
 	if err != nil {
 		logger.LogError(err)

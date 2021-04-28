@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"text/template"
-	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 )
@@ -57,117 +55,6 @@ func (a Article) Delete() (rowsAffected int64, err error) {
 		return n, nil
 	}
 	return 0, nil
-}
-
-func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. 获取 URL参数
-	id := getRouteVariable("id", r)
-
-	// 2. 读取对应文章的数据
-	article, err := getArticlesByID(id)
-
-	// 3. 如果出现问题
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// 3.1 数据未找到
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 文章未找到")
-		} else {
-			// 3.2 数据库出现问题
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 服务器内部错误")
-		}
-	} else {
-		// 4. 读取数据成功，显示表单
-		updateURL, _ := router.Get("articles.update").URL("id", id)
-		data := ArticlesFormData{
-			Title:  article.Title,
-			Body:   article.Body,
-			URL:    updateURL,
-			Errors: nil,
-		}
-		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-		logger.LogError(err)
-		tmpl.Execute(w, data)
-	}
-}
-
-func valdateArticleFormData(title string, body string) map[string]string {
-	errors := make(map[string]string)
-	// 验证标题
-	if title == "" {
-		errors["title"] = "标题不能为空"
-	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "标题长度需介于 3 - 40 之间"
-	}
-
-	// 验证内容
-	if body == "" {
-		errors["body"] = "内容不能为空"
-	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "内容长度需要大于 10 个字节"
-	}
-	return errors
-}
-
-func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. 获取 URL 参数
-	id := getRouteVariable("id", r)
-
-	// 2. 读取相应的文章
-	_, err := getArticlesByID(id)
-
-	// 3. 如果出现错误
-	if err != nil {
-		// 3.1 数据未找到
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 文章未找到")
-		} else {
-			// 3.2 数据库出现错误
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 服务器错误")
-		}
-	} else {
-		// 4. 未出现错误
-
-		// 4.1 表单验证
-		title := r.PostFormValue("title")
-		body := r.PostFormValue("body")
-		errors := valdateArticleFormData(title, body)
-		if len(errors) == 0 {
-			// 表单验证通过，更新数据
-			query := "UPDATE articles SET title = ?, body = ? WHERE id = ?"
-			rs, err := db.Exec(query, title, body, id)
-
-			if err != nil {
-				logger.LogError(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "500 服务器内部错误")
-			}
-
-			// 更新成功，跳转到文章详情页面
-			if n, _ := rs.RowsAffected(); n > 0 {
-				showURL, _ := router.Get("articles.show").URL("id", id)
-				http.Redirect(w, r, showURL.String(), http.StatusFound)
-			} else {
-				fmt.Fprint(w, "您没有做任何的修改")
-			}
-		} else {
-			// 表单验证不通过，显示理由
-			updateURL, _ := router.Get("articles.update").URL("id", id)
-			data := ArticlesFormData{
-				Title:  title,
-				Body:   body,
-				URL:    updateURL,
-				Errors: errors,
-			}
-			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-			logger.LogError(err)
-			tmpl.Execute(w, data)
-		}
-	}
 }
 
 func forceHTMLMiddleware(next http.Handler) http.Handler {
@@ -242,8 +129,6 @@ func main() {
 	// 路由的初始化
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
-	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
-	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")
 	router.HandleFunc("/articles/{id:[0-9]+}/delete", articlesDeleteHandler).Methods("POST").Name("articles.delete")
 	router.Use(forceHTMLMiddleware) // 使用Gorillia Mux 中的use方法来加载中间件
 	// 通过命名路由获取 URL 实例

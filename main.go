@@ -44,16 +44,6 @@ func getArticlesByID(id string) (Article, error) {
 	return article, err
 }
 
-// 	Link 方法用来生成文章连接
-func (a Article) Link() string {
-	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
-	if err != nil {
-		logger.LogError(err)
-		return ""
-	}
-	return showURL.String()
-}
-
 // Delete 用于从数据库中删除单条数据
 func (a Article) Delete() (rowsAffected int64, err error) {
 	rs, err := db.Exec("DELETE FROM articles WHERE id = " + strconv.FormatInt(a.ID, 10))
@@ -67,35 +57,6 @@ func (a Article) Delete() (rowsAffected int64, err error) {
 		return n, nil
 	}
 	return 0, nil
-}
-
-func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. 执行一个查询语句，返回一个结果集
-	rows, err := db.Query("SELECT * FROM articles")
-	logger.LogError(err)
-	defer rows.Close()
-
-	var articles []Article
-	// 2. 循环读取结果
-	for rows.Next() {
-		var article Article
-		// 2.1 扫描每一行结果并赋值到 article 对象中
-		err := rows.Scan(&article.ID, &article.Title, &article.Body)
-		logger.LogError(err)
-		// 2.2 将 article 追加到 articles 对象中
-		articles = append(articles, article)
-	}
-
-	// 2.3 检测遍历时是否发生错误
-	err = rows.Err()
-	logger.LogError(err)
-
-	// 3 加载模版
-	tmpl, err := template.ParseFiles("resources/views/articles/index.html")
-	logger.LogError(err)
-
-	// 4. 渲染模版，将所有文章的数据传输进去
-	tmpl.Execute(w, articles)
 }
 
 func saveArticlesToDB(title string, body string) (int64, error) {
@@ -364,7 +325,6 @@ func main() {
 	router = bootstrap.SetupRoute()
 
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")
-	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 	router.HandleFunc("/articles/{id:[0-9]+}/edit", articlesEditHandler).Methods("GET").Name("articles.edit")
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesUpdateHandler).Methods("POST").Name("articles.update")

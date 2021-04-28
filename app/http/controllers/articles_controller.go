@@ -46,3 +46,22 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 		tmpl.Execute(w, article)
 	}
 }
+
+func (*ArticlesControllers) Index(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取结果集合
+	articles, err := article.GetAll()
+
+	if err != nil {
+		// 数据库错误
+		logger.LogError(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "500 服务器错误")
+	} else {
+		// 2. 加载模版
+		tmpl, err := template.ParseFiles("resources/views/articles/index.html")
+		logger.LogError(err)
+
+		// 3. 渲染模版，将所有文章数据传输进去
+		tmpl.Execute(w, articles)
+	}
+}

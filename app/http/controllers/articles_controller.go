@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"database/sql"
 	"fmt"
 	"goblog/app/models/article"
 	"goblog/pkg/logger"
@@ -241,6 +242,50 @@ func (*ArticlesControllers) Update(w http.ResponseWriter, r *http.Request) {
 			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
 			logger.LogError(err)
 			tmpl.Execute(w, data)
+		}
+	}
+}
+
+func (*ArticlesControllers) Delete(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL 参数
+	id := route.GetRouteVariable("id", r)
+
+	// 2. 读取对应文章的数据
+	_article, err := article.Get(id)
+
+	// 3. 如果出现错误
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// 3.1 数据没有找到
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			// 3.2 数据库错误
+			logger.LogError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
+	} else {
+		// 4. 未出现错误，执行删除操作
+		rowsAffected, err := _article.Delete()
+
+		// 4.1 发生错误
+		if err != nil {
+			// 应该是 SQL 出错
+			logger.LogError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器错误")
+		} else {
+			// 4.2 未发生错误
+			if rowsAffected > 0 {
+				// 重定向到文章列表页面
+				indexURL := route.Name2URL("article.index")
+				http.Redirect(w, r, indexURL, http.StatusFound)
+			} else {
+				// Edge case
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprint(w, "404 文章未找到")
+			}
 		}
 	}
 }

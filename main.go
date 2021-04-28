@@ -6,7 +6,6 @@ import (
 	"goblog/bootstrap"
 	"goblog/pkg/database"
 	"goblog/pkg/logger"
-	"goblog/pkg/route"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -31,6 +30,11 @@ type ArticlesFormData struct {
 type Article struct {
 	Title, Body string
 	ID          int64
+}
+
+func getRouteVariable(parameterName string, r *http.Request) string {
+	vars := mux.Vars(r)
+	return vars[parameterName]
 }
 
 func getArticlesByID(id string) (Article, error) {
@@ -177,7 +181,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL参数
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 
 	// 2. 读取对应文章的数据
 	article, err := getArticlesByID(id)
@@ -210,7 +214,7 @@ func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL 参数
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 
 	// 2. 读取相应的文章
 	_, err := getArticlesByID(id)
@@ -308,7 +312,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL 参数
-	id := route.GetRouteVariable("id", r)
+	id := getRouteVariable("id", r)
 
 	// 2. 读取对应文章的数据
 	article, err := getArticlesByID(id)
@@ -356,6 +360,7 @@ func main() {
 	db = database.DB
 
 	// 路由的初始化
+	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
 
 	router.HandleFunc("/articles/create", articlesCreateHandler).Methods("GET").Name("articles.create")

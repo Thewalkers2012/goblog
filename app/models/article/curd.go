@@ -50,5 +50,5 @@ func (article *Article) Delete() (rowsAffected int64, err error) {
 		logger.LogError(err)
 		return 0, err
 	}
-	return rowsAffected, nil
+	return result.RowsAffected, nil
 }

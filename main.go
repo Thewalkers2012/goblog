@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"goblog/bootstrap"
 	"net/http"
 	"strings"
@@ -37,9 +36,5 @@ func main() {
 	router = bootstrap.SetupRoute()
 	router.Use(forceHTMLMiddleware) // 使用Gorillia Mux 中的use方法来加载中间件
 	// 通过命名路由获取 URL 实例
-	homeURL, _ := router.Get("home").URL()
-	fmt.Println("homeURL: ", homeURL)
-	articleURL, _ := router.Get("articles.show").URL("id", "1")
-	fmt.Println("articleURL: ", articleURL)
 	http.ListenAndServe(":3000", removeTrailingSlash(router))
 }

@@ -7,7 +7,7 @@ import (
 
 // Article 文章模型
 type Article struct {
-	ID    int
+	ID    int64 // 注意类型，FormarInt 的转化类型为 int64 这里也需要对应，否则不能转换
 	Title string
 	Body  string
 }

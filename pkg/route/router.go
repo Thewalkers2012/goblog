@@ -21,7 +21,6 @@ func Name2URL(routeName string, pairs ...string) string {
 		logger.LogError(err)
 		return ""
 	}
-
 	return url.String()
 }
 

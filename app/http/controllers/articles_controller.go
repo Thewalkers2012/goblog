@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
 	"fmt"
 	"goblog/app/models/article"
 	"goblog/pkg/logger"
@@ -25,7 +24,7 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 	id := route.GetRouteVariable("id", r)
 
 	// 2. 读取对应的文章的数据
-	article, err := article.Get(id)
+	_article, err := article.Get(id)
 
 	// 3. 如果出现了错误
 	if err != nil {
@@ -41,12 +40,14 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// 4. 读取成功
+
 		tmpl, err := template.New("show.html").Funcs(template.FuncMap{
 			"RouteName2URL": route.Name2URL,
 			"Int64ToString": types.Int64ToString,
 		}).ParseFiles("resources/views/articles/show.html")
+
 		logger.LogError(err)
-		tmpl.Execute(w, article)
+		tmpl.Execute(w, _article)
 	}
 }
 
@@ -63,7 +64,6 @@ func (*ArticlesControllers) Index(w http.ResponseWriter, r *http.Request) {
 		// 2. 加载模版
 		tmpl, err := template.ParseFiles("resources/views/articles/index.html")
 		logger.LogError(err)
-
 		// 3. 渲染模版，将所有文章数据传输进去
 		tmpl.Execute(w, articles)
 	}
@@ -114,6 +114,7 @@ func valdateArticleFormData(title string, body string) map[string]string {
 
 // Store 文章保存的处理
 func (*ArticlesControllers) Store(w http.ResponseWriter, r *http.Request) {
+
 	title := r.PostFormValue("title")
 	body := r.PostFormValue("body")
 	errors := valdateArticleFormData(title, body)
@@ -255,7 +256,7 @@ func (*ArticlesControllers) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// 3. 如果出现错误
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == gorm.ErrRecordNotFound {
 			// 3.1 数据没有找到
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "404 文章未找到")
@@ -279,7 +280,7 @@ func (*ArticlesControllers) Delete(w http.ResponseWriter, r *http.Request) {
 			// 4.2 未发生错误
 			if rowsAffected > 0 {
 				// 重定向到文章列表页面
-				indexURL := route.Name2URL("article.index")
+				indexURL := route.Name2URL("articles.index")
 				http.Redirect(w, r, indexURL, http.StatusFound)
 			} else {
 				// Edge case

@@ -7,7 +7,6 @@ import (
 	"goblog/pkg/route"
 	"goblog/pkg/view"
 	"net/http"
-	"strconv"
 	"unicode/utf8"
 
 	"gorm.io/gorm"
@@ -40,12 +39,7 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// ---  4. 读取成功，显示文章 ---
 
-		view.Render(w, ArticlesFormData{
-			Title:   _article.Title,
-			Body:    _article.Body,
-			Article: _article,
-			Errors:  nil,
-		}, "articles.show")
+		view.Render(w, _article, "articles.show")
 	}
 }
 
@@ -111,7 +105,7 @@ func (*ArticlesControllers) Store(w http.ResponseWriter, r *http.Request) {
 		}
 		_article.Create()
 		if _article.ID > 0 {
-			fmt.Fprint(w, "插入成功， ID 为"+strconv.FormatUint(uint64(_article.ID), 10))
+			fmt.Fprint(w, "插入成功， ID 为"+_article.GetStringID())
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "创建文章失败，请联系管理员")

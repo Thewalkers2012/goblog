@@ -40,15 +40,28 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 服务器错误")
 		}
 	} else {
-		// 4. 读取成功
+		// ---  4. 读取成功，显示文章 ---
 
-		tmpl, err := template.New("show.html").Funcs(template.FuncMap{
-			"RouteName2URL": route.Name2URL,
-			"Int64ToString": types.Int64ToString,
-		}).ParseFiles("resources/views/articles/show.html")
+		// 4.0 设置模板相对路径
+		viewDir := "resources/views"
 
+		// 4.1 所有布局模板文件 Slice
+		files, err := filepath.Glob(viewDir + "/layouts/*.html")
 		logger.LogError(err)
-		tmpl.Execute(w, _article)
+
+		// 4.2 在 Slice 里新增我们的目标文件
+		newFiles := append(files, viewDir+"/articles/show.html")
+
+		// 4.3 解析模板文件
+		tmpl, err := template.New("show.html").
+			Funcs(template.FuncMap{
+				"RouteName2URL": route.Name2URL,
+				"Int64ToString": types.Int64ToString,
+			}).ParseFiles(newFiles...)
+		logger.LogError(err)
+
+		// 4.4 渲染模板，将所有文章的数据传输进去
+		tmpl.ExecuteTemplate(w, "app", _article)
 	}
 }
 

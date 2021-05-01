@@ -16,5 +16,7 @@ func (*AuthController) Register(w http.ResponseWriter, r *http.Request) {
 
 // DoRegister 处理注册逻辑
 func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
-
+	// 1. 表单验证
+	// 2. 验证通过 —— 入库，并跳转到首页
+	// 3. 表单不通过 —— 重新显示表单
 }

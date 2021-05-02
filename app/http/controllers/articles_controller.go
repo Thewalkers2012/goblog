@@ -13,11 +13,11 @@ import (
 )
 
 // ArticlesControllers 文章相关页面
-type ArticlesControllers struct {
+type ArticlesController struct {
 }
 
 // Show 文章详情页面
-func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
+func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL 参数
 	id := route.GetRouteVariable("id", r)
 
@@ -38,12 +38,13 @@ func (*ArticlesControllers) Show(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// ---  4. 读取成功，显示文章 ---
-
-		view.Render(w, _article, "articles.show")
+		view.Render(w, view.D{
+			"Article": _article,
+		}, "articles.show")
 	}
 }
 
-func (*ArticlesControllers) Index(w http.ResponseWriter, r *http.Request) {
+func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取结果集合
 	articles, err := article.GetAll()
 
@@ -54,22 +55,15 @@ func (*ArticlesControllers) Index(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "500 服务器错误")
 	} else {
 		// ---  2. 加载模板 ---
-
-		view.Render(w, articles, "articles.index")
+		view.Render(w, view.D{
+			"Articles": articles,
+		}, "articles.index")
 	}
 }
 
-// ArticlesFormData 创建博文表单数据
-type ArticlesFormData struct {
-	Title, Body string
-	URL         string
-	Errors      map[string]string
-	Article     article.Article
-}
-
 // Create 文章创建页面
-func (*ArticlesControllers) Create(w http.ResponseWriter, r *http.Request) {
-	view.Render(w, ArticlesFormData{}, "articles.create", "articles._form_field")
+func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
+	view.Render(w, view.D{}, "articles.create", "articles._form_field")
 }
 
 func valdateArticleFormData(title string, body string) map[string]string {
@@ -91,7 +85,7 @@ func valdateArticleFormData(title string, body string) map[string]string {
 }
 
 // Store 文章保存的处理
-func (*ArticlesControllers) Store(w http.ResponseWriter, r *http.Request) {
+func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 
 	title := r.PostFormValue("title")
 	body := r.PostFormValue("body")
@@ -111,106 +105,98 @@ func (*ArticlesControllers) Store(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "创建文章失败，请联系管理员")
 		}
 	} else {
-		view.Render(w, ArticlesFormData{
-			Title:  title,
-			Body:   body,
-			Errors: errors,
+		view.Render(w, view.D{
+			"Title":  title,
+			"Body":   body,
+			"Errors": errors,
 		}, "articles.create", "articles._form_field")
 	}
 }
 
-func (*ArticlesControllers) Edit(w http.ResponseWriter, r *http.Request) {
-	// 1. 获取 URL参数
+// Edit 文章更新页面
+func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取 URL 参数
 	id := route.GetRouteVariable("id", r)
-
-	// 2. 读取对应文章的数据
+	// 2. 读取对应的文章数据
 	_article, err := article.Get(id)
-
-	// 3. 如果出现问题
+	// 3. 如果出现错误
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 3.1 数据未找到
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "404 文章未找到")
 		} else {
-			// 3.2 数据库出现问题
+			// 3.2 数据库错误
 			logger.LogError(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "500 服务器内部错误")
 		}
 	} else {
-		// 4. 读取成功， 显示编辑文章表单
-		view.Render(w, ArticlesFormData{
-			Title:   _article.Title,
-			Body:    _article.Body,
-			Article: _article,
-			Errors:  nil,
+		// 4. 读取成功，显示编辑文章表单
+		view.Render(w, view.D{
+			"Title":   _article.Title,
+			"Body":    _article.Body,
+			"Article": _article,
+			"Errors":  nil,
 		}, "articles.edit", "articles._form_field")
 	}
 }
 
-func (*ArticlesControllers) Update(w http.ResponseWriter, r *http.Request) {
+// Update 更新文章
+func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL 参数
 	id := route.GetRouteVariable("id", r)
-
-	// 2. 读取相应的文章
+	// 2. 读取对应的文章数据
 	_article, err := article.Get(id)
-
 	// 3. 如果出现错误
 	if err != nil {
-		// 3.1 数据未找到
 		if err == gorm.ErrRecordNotFound {
+			// 3.1 数据未找到
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "404 文章未找到")
 		} else {
-			// 3.2 数据库出现错误
+			// 3.2 数据库错误
 			logger.LogError(err)
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 服务器错误")
+			fmt.Fprint(w, "500 服务器内部错误")
 		}
 	} else {
 		// 4. 未出现错误
-
 		// 4.1 表单验证
-
 		title := r.PostFormValue("title")
 		body := r.PostFormValue("body")
-
 		errors := valdateArticleFormData(title, body)
-
 		if len(errors) == 0 {
-
+			// 4.2 表单验证通过，更新数据
 			_article.Title = title
 			_article.Body = body
 			rowsAffected, err := _article.Update()
-
 			if err != nil {
 				// 数据库错误
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "500 服务器出现错误")
+				fmt.Fprint(w, "500 服务器内部错误")
 				return
 			}
-
-			// 更新数据，跳转到详情页面
+			// √ 更新成功，跳转到文章详情页
 			if rowsAffected > 0 {
 				showURL := route.Name2URL("articles.show", "id", id)
 				http.Redirect(w, r, showURL, http.StatusFound)
 			} else {
-				fmt.Fprint(w, "您没有做出任何更改")
+				fmt.Fprint(w, "您没有做任何更改！")
 			}
 		} else {
-			// 表单验证不通过，显示理由
-			view.Render(w, ArticlesFormData{
-				Title:   title,
-				Body:    body,
-				Article: _article,
-				Errors:  errors,
+			// 4.3 表单验证不通过，显示理由
+			view.Render(w, view.D{
+				"Title":   title,
+				"Body":    body,
+				"Article": _article,
+				"Errors":  errors,
 			}, "articles.edit", "articles._form_field")
 		}
 	}
 }
 
-func (*ArticlesControllers) Delete(w http.ResponseWriter, r *http.Request) {
+func (*ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取 URL 参数
 	id := route.GetRouteVariable("id", r)
 
@@ -243,7 +229,7 @@ func (*ArticlesControllers) Delete(w http.ResponseWriter, r *http.Request) {
 			// 4.2 未发生错误
 			if rowsAffected > 0 {
 				// 重定向到文章列表页面
-				indexURL := route.Name2URL("articles.index")
+				indexURL := route.Name2URL("home")
 				http.Redirect(w, r, indexURL, http.StatusFound)
 			} else {
 				// Edge case

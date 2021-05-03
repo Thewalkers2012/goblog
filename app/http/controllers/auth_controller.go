@@ -5,6 +5,7 @@ import (
 	"goblog/app/models/user"
 	"goblog/app/requests"
 	"goblog/pkg/auth"
+	"goblog/pkg/flash"
 	"goblog/pkg/view"
 	"net/http"
 )
@@ -44,6 +45,8 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 		_user.Create()
 
 		if _user.ID > 0 {
+			// 登录用户并跳转到首页
+			flash.Success("恭喜注册成功！")
 			auth.Login(_user)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
@@ -52,8 +55,6 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
-// $2a$14$2ZW2GARIG1AYzex19nZSwuSHHN0PvTDrVOlcam/pKAQqsVNpvFUf2
 
 // Login 显示登录表单
 func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +71,7 @@ func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 	// 2. 尝试登录
 	if err := auth.Attempt(email, password); err == nil {
 		// 登录成功
+		flash.Success("欢迎回来！")
 		http.Redirect(w, r, "/", http.StatusFound)
 	} else {
 		// 3. 失败，显示错误提示
@@ -84,5 +86,6 @@ func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 // Logout 退出登录
 func (*AuthController) Logout(w http.ResponseWriter, r *http.Request) {
 	auth.Logout()
+	flash.Success("您已退出登录！")
 	http.Redirect(w, r, "/", http.StatusFound)
 }

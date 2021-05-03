@@ -28,6 +28,7 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 		Password:        r.PostFormValue("password"),
 		PasswordConfirm: r.PostFormValue("password_confirm"),
 	}
+	fmt.Println(_user)
 
 	// 2. 表单规则
 	errs := requests.ValidateRegistrationForm(_user)
@@ -51,6 +52,8 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+// $2a$14$2ZW2GARIG1AYzex19nZSwuSHHN0PvTDrVOlcam/pKAQqsVNpvFUf2
 
 // Login 显示登录表单
 func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {

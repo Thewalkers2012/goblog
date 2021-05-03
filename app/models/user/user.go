@@ -1,6 +1,9 @@
 package user
 
-import "goblog/app/models"
+import (
+	"goblog/app/models"
+	"goblog/pkg/route"
+)
 
 // User 用户模型
 type User struct {
@@ -16,5 +19,5 @@ type User struct {
 
 // Link 方法用来生成用户链接
 func (u User) Link() string {
-	return ""
+	return route.Name2URL("user.show", "id", u.GetStringID())
 }

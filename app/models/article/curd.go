@@ -20,7 +20,7 @@ func Get(idstr string) (Article, error) {
 // GetAll 获取全部文章
 func GetAll() ([]Article, error) {
 	var articles []Article
-	if err := model.DB.Debug().Preload("User").Find(&articles).Error; err != nil {
+	if err := model.DB.Preload("User").Find(&articles).Error; err != nil {
 		return articles, err
 	}
 	return articles, nil
@@ -52,4 +52,13 @@ func (article *Article) Delete() (rowsAffected int64, err error) {
 		return 0, err
 	}
 	return result.RowsAffected, nil
+}
+
+// GetByUserID 获取全部文章
+func GetByUserID(uid string) ([]Article, error) {
+	var articles []Article
+	if err := model.DB.Where("user_id = ?", uid).Preload("User").Find(&articles); err != nil {
+		return articles, nil
+	}
+	return articles, nil
 }

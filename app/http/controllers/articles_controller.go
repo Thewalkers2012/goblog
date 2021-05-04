@@ -192,7 +192,7 @@ func (ac *ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 				// 4.2 未发生错误
 				if rowsAffected > 0 {
 					// 重定向到文章列表页
-					indexURL := route.Name2URL("articles.index")
+					indexURL := route.Name2URL("home")
 					http.Redirect(w, r, indexURL, http.StatusFound)
 				} else {
 					// Edge case

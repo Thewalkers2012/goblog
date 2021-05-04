@@ -3,6 +3,7 @@ package category
 import (
 	"goblog/pkg/logger"
 	"goblog/pkg/model"
+	"goblog/pkg/types"
 )
 
 // Create 创建分类，通过 category.ID 来判断是否创建成功
@@ -22,4 +23,14 @@ func All() ([]Category, error) {
 		return categories, nil
 	}
 	return categories, nil
+}
+
+// Get 通过 ID 来获取分类
+func Get(idstr string) (Category, error) {
+	var category Category
+	id := types.StringToInt(idstr)
+	if err := model.DB.First(&category, id).Error; err != nil {
+		return category, nil
+	}
+	return category, nil
 }
